@@ -1,6 +1,6 @@
 # SINDy Analysis of Kocsis et al. (2011) Weak-Measurement Photon Trajectories
 
-**Data-driven equation discovery reveals a $\kappa(\theta - \sin\theta)$ nonlinearity in empirical photon trajectory data — structurally identical to a term independently extracted from a Teleparallel Gravity (TEGR) toy model.**
+**Data-driven equation discovery applied to empirical photon trajectory data reveals a weak nonlinear signal whose functional form — cubic vs. sinusoidal — remains ambiguous due to collinearity at small amplitudes.**
 
 ---
 
@@ -8,21 +8,32 @@
 
 This repository contains a fully reproducible analysis pipeline that:
 
-1. Downloads and parses the **raw experimental data** from the landmark 2011 *Science* paper by Kocsis, Steinberg et al. — ["Observing the Average Trajectories of Single Photons in a Two-Slit Interferometer"](https://doi.org/10.1126/science.1202218)
+1. Parses the **raw experimental data** from the landmark 2011 *Science* paper by Kocsis, Steinberg et al. — ["Observing the Average Trajectories of Single Photons in a Two-Slit Interferometer"](https://doi.org/10.1126/science.1202218)
 2. Reconstructs photon trajectories from weak-measurement momentum data
-3. Applies [PySINDy](https://github.com/dynamicslab/pysindy) (Sparse Identification of Nonlinear Dynamics) to **blindly discover** the governing differential equation
+3. Normalizes all coordinates to **dimensionless** units (dividing by the slit separation L = 4.68 mm)
+4. Applies [PySINDy](https://github.com/dynamicslab/pysindy) to **blindly discover** the governing differential equation
+5. Runs **two analyses side by side** — polynomial-only (null test) and full library (with trig functions) — for honest comparison
 
-### The Key Result
+### The Results
 
-PySINDy, operating without any assumed functional form, extracted:
+| Analysis | Discovered Equation | R² |
+|---|---|---|
+| **Polynomial-only** (null test) | dξ/dζ = 0.004 ξ³ | **0.1054** |
+| **Full library** (poly + trig) | dξ/dζ = 8.708 ξ − 1.430 ξ³ − 8.709 sin(ξ) | **0.1512** |
 
-$$\frac{dx}{dz} = -0.001 + 0.007\,x_0 - 0.001\,x_0^3 - 0.007\,\sin(x_0) + 0.001\,\cos(x_0)$$
+The full library result simplifies to dξ/dζ ≈ 8.71(ξ − sin ξ), which structurally resembles the κ(θ − sin θ) term independently discovered in a TEGR (Teleparallel Gravity) simulation.
 
-The two dominant terms combine to:
+### The Caveat
 
-$$\frac{dx}{dz} \approx 0.007\,(x - \sin x)$$
+**At the amplitudes present in this data (|ξ| ≤ 0.32), the Taylor expansion gives:**
 
-This $x - \sin(x)$ structure was **independently discovered** in a TEGR simulation, where a blind SINDy node extracted $\kappa(\theta - \sin\theta)$ from colliding torsion matrices — a completely different physical context.
+$$\xi - \sin(\xi) \approx \frac{\xi^3}{6}$$
+
+The correlation between these two expressions exceeds **0.999999** in the data range. SINDy cannot reliably distinguish between cubic and sinusoidal nonlinearity at these small amplitudes. The ΔR² between the two models is only 0.046.
+
+**The nonlinear signal is real. Its functional form is ambiguous.**
+
+Resolving this requires data at larger transverse excursions (|ξ| > ~1) where the cubic and sinusoidal forms diverge.
 
 ### Reconstructed Trajectories
 
@@ -34,9 +45,11 @@ This $x - \sin(x)$ structure was **independently discovered** in a TEGR simulati
 
 | File | Description |
 |---|---|
-| [`PAPER.md`](PAPER.md) | Full research findings document with methodology, results, discussion, and references |
-| [`sindy_kocsis_2011.py`](sindy_kocsis_2011.py) | Heavily annotated Python script (644 lines of code + comments) |
-| [`sindy_kocsis_report.json`](sindy_kocsis_report.json) | Machine-readable SINDy output (equations, features, R² score) |
+| [`PAPER.md`](PAPER.md) | Full research findings with sanity checks, collinearity analysis, and honest discussion |
+| [`sindy_kocsis_2011.py`](sindy_kocsis_2011.py) | Annotated analysis script with dimensionless normalization and dual-model comparison |
+| [`sindy_kocsis_sanity_checks.py`](sindy_kocsis_sanity_checks.py) | Standalone diagnostic: null test, unit fix, threshold sweep, collinearity measurement |
+| [`sindy_kocsis_report.json`](sindy_kocsis_report.json) | Machine-readable output with both models and comparison metrics |
+| [`sindy_kocsis_sanity_checks.json`](sindy_kocsis_sanity_checks.json) | Full diagnostic results from all sanity checks |
 | [`Kocsis_Empirical_Trajectories.png`](Kocsis_Empirical_Trajectories.png) | Reconstructed trajectory plot |
 | `Kocsis_Data.zip` | Archived copy of the raw experimental data from the Steinberg lab |
 
@@ -55,21 +68,35 @@ pip install numpy scipy matplotlib pysindy
 # Unzip the raw data
 unzip Kocsis_Data.zip
 
-# Run the analysis
+# Run the main dual analysis
 python sindy_kocsis_2011.py
+
+# Run the full sanity check suite
+python sindy_kocsis_sanity_checks.py
 ```
 
-> **Note:** You may need to update the `data_dir` path in `sindy_kocsis_2011.py` to point to the unzipped `Kocsis_Data/OnlineArchive/Data/45-90 equiv both 0.05 15 sec/pics` directory on your system.
+> **Note:** You may need to update the `data_dir` path in both scripts to point to the unzipped data directory on your system.
 
 ---
 
-## Caveats
+## What This Shows (and What It Doesn't)
 
-- The numerical goodness-of-fit is **R² ≈ 0.19** — modest. The significance lies in the *structural form* of the discovered equation, not in the quantitative accuracy.
-- This is a **preliminary finding**, not a peer-reviewed result. Further statistical validation (cross-validation, bootstrap, null model comparison) is needed.
-- The ontological status of weak-measurement "trajectories" remains debated in the physics community.
+### What it shows:
+- There is a **real, weak nonlinear signal** in the Kocsis photon trajectory data (R² ~ 0.10–0.15)
+- The signal is consistent with **either** a pure cubic term **or** a (θ − sin θ) structure
+- These two forms are **numerically indistinguishable** at the amplitudes available in this dataset
 
-See [`PAPER.md`](PAPER.md) for a full discussion of limitations and proposed next steps.
+### What it does NOT show:
+- It does **not** prove that TEGR governs photon trajectories
+- It does **not** uniquely identify the (θ − sin θ) structure over a simpler cubic
+- The R² values are modest (0.10–0.15), meaning the model explains only 10–15% of the variance
+
+### What would resolve the ambiguity:
+- Data at larger transverse excursions (|x/L| > ~1 radian) where x³/6 and (x − sin x) diverge
+- Multi-slit experiments with variable slit separation to test scaling behavior
+- Independent theoretical derivation connecting wave-front torsion to the (θ − sin θ) form
+
+See [`PAPER.md`](PAPER.md) for full discussion, methodology, and proposed research directions.
 
 ---
 
